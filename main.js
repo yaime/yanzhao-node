@@ -58,27 +58,38 @@ const getAllSchoolList = async ()=>{
     schList = ret
     // 先把横坐标去写了
     const rowValues = ['一级', '二级','二级', ...schList]
-    sheet.addRow(rowValues).commit();
-    zy.map(async zyItem =>{ // 遍历
-        let arr = []
-        schList.map(async item=>{ // 遍历
-            console.log(item)
-            arr.push(await handleGetZy(browser, zyItem.dm, item))
-        })
-        sheet.addRow([zyItem.name, ...arr]).commit();
-    })
-    
-    // zy.map(async zyItem =>{
-    //    
-    //     arr.push({
-
-    //     })
-    // })
-    // schList.map(async item=>{ // 遍历
-    // })
-    
-    workbook.xlsx.writeFile('统计.xlsx');
-    // console.log(zy)
+    sheet.columns = rowValues.map((item, index) => {
+        return {
+            header: item,
+            key: index,
+            width: 10
+        }
+    });
+    console.log('开始获取专业列表')
+    await mapZyList();
+    console.log('开始写入文件')
+    workbook.xlsx.writeFile('./results/excels/统计.xlsx');
+    console.log('写入完成')
+    async function mapZyList() {
+        return Promise.all(zy.map(async (zyItem) => {
+            const zyBroser =await puppeteer.launch();
+            console.log('新建浏览器 for ', zyItem)
+            const rowValues = {
+                0: zyItem.mc,
+                1: zyItem.mc,
+                2: zyItem.dm,
+            }
+            await mapSchoolPages();
+            console.log(rowValues);
+            sheet.addRow(rowValues).commit();
+            async function mapSchoolPages() {
+                return Promise.all(schList.map(async (item, index) => {
+                    let length = await handleGetZy(zyBroser, zyItem.dm, item);
+                    rowValues[index+3] = length;
+                }));
+            }
+        }))
+    }
 }
 const handleGetSchool = async(page, start)=>{
     await page.goto(`https://yz.chsi.com.cn/sch/search.do?ssdm=11&start=${start}`);
@@ -91,22 +102,22 @@ const handleGetSchool = async(page, start)=>{
 const handleGetZy = async(broser, zy, sch)=>{
     const page = await broser.newPage();
     await page.goto(`https://yz.chsi.com.cn/zsml/querySchAction.do?ssdm=11&dwmc=${sch}&yjxkdm=${zy}`)
-    await page.pdf({path: `./results/pics/${sch}-${zy}.pdf`, format: 'A4'});
+    // await page.pdf({path: `./results/pics/${sch}-${zy}.pdf`, format: 'A4'}); // 不再打印
     const item = await page.$('.zsml-zy-filter')
-    if(item === null){
-        // await page.close()
-        setTimeout(() => {
-            return null
-        }, 2000);
+    if(item === null ){
+        return new Promise((resolve)=>{
+            resolve(0)
+            page.close()
+        }) 
     }
-    const element = item.$$eval('label',  nodes => nodes.map(n => {
+    const element =await item.$$eval('label',  nodes => nodes.map(n => {
         return n.innerText
     }))
-    // await page.close()
-    setTimeout(() => {
-        return element.length
+    return new Promise((resolve)=>{
         
-    }, 2000);
+        resolve(element.length)
+        page.close()
+    }) 
 }
 
 getAllSchoolList()
