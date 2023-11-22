@@ -94,7 +94,7 @@ const handleGetZy = async(broser, zy, sch)=>{
     await page.pdf({path: `./results/pics/${sch}-${zy}.pdf`, format: 'A4'});
     const item = await page.$('.zsml-zy-filter')
     if(item === null){
-        await page.close()
+        // await page.close()
         setTimeout(() => {
             return null
         }, 2000);
@@ -102,7 +102,7 @@ const handleGetZy = async(broser, zy, sch)=>{
     const element = item.$$eval('label',  nodes => nodes.map(n => {
         return n.innerText
     }))
-    await page.close()
+    // await page.close()
     setTimeout(() => {
         return element.length
         
