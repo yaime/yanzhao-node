@@ -71,8 +71,9 @@ const getAllSchoolList = async ()=>{
     workbook.xlsx.writeFile('./results/excels/统计.xlsx');
     console.log('写入完成')
     async function mapZyList() {
-        return Promise.all(zy.map(async (zyItem) => {
-            const zyBroser =await puppeteer.launch();
+        for (let index = 0; index < zy.length; index++) {
+            const zyItem = zy[index];
+            const zyBroser =await puppeteer.launch({headless: "new"});
             console.log('新建浏览器 for ', zyItem)
             const rowValues = {
                 0: zyItem.mc,
@@ -82,13 +83,33 @@ const getAllSchoolList = async ()=>{
             await mapSchoolPages();
             console.log(rowValues);
             sheet.addRow(rowValues).commit();
+            zyBroser.close()
             async function mapSchoolPages() {
                 return Promise.all(schList.map(async (item, index) => {
                     let length = await handleGetZy(zyBroser, zyItem.dm, item);
                     rowValues[index+3] = length;
                 }));
             }
-        }))
+        }
+        // return Promise.all(zy.map(async (zyItem) => {
+        //     const zyBroser =await puppeteer.launch();
+        //     console.log('新建浏览器 for ', zyItem)
+        //     const rowValues = {
+        //         0: zyItem.mc,
+        //         1: zyItem.mc,
+        //         2: zyItem.dm,
+        //     }
+        //     await mapSchoolPages();
+        //     console.log(rowValues);
+        //     sheet.addRow(rowValues).commit();
+        //     zyBroser.close()
+        //     async function mapSchoolPages() {
+        //         return Promise.all(schList.map(async (item, index) => {
+        //             let length = await handleGetZy(zyBroser, zyItem.dm, item);
+        //             rowValues[index+3] = length;
+        //         }));
+        //     }
+        // }))
     }
 }
 const handleGetSchool = async(page, start)=>{
@@ -101,7 +122,7 @@ const handleGetSchool = async(page, start)=>{
 }
 const handleGetZy = async(broser, zy, sch)=>{
     const page = await broser.newPage();
-    await page.goto(`https://yz.chsi.com.cn/zsml/querySchAction.do?ssdm=11&dwmc=${sch}&yjxkdm=${zy}`)
+    await page.goto(`https://yz.chsi.com.cn/zsml/querySchAction.do?ssdm=11&dwmc=${sch}&yjxkdm=${zy}`, {timeout: 0})
     // await page.pdf({path: `./results/pics/${sch}-${zy}.pdf`, format: 'A4'}); // 不再打印
     const item = await page.$('.zsml-zy-filter')
     if(item === null ){
